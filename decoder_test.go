@@ -2,6 +2,7 @@ package serde
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"iter"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 	"unsafe"
@@ -21,6 +23,7 @@ func TestUnmarshalStruct(t *testing.T) {
 		ZipCode int32 `json:"zip,omitempty"`
 	}
 
+	//goland:noinspection ALL
 	type Student struct {
 		Name       string
 		AgeInYears int64  `json:"age"`
@@ -28,6 +31,13 @@ func TestUnmarshalStruct(t *testing.T) {
 		Tags       Tags
 		Address    *Address
 		Height     float32
+		Accepted   bool
+
+		// not exported, must not be set
+		note string
+
+		// not exported with tag, must not be set
+		privateValue string `json:"PrivateValue"`
 	}
 
 	sourceValue := dummySourceValue{
@@ -42,6 +52,7 @@ func TestUnmarshalStruct(t *testing.T) {
 			"$.Tags":         "foo,bar",
 			"$.Address.City": "Zürich",
 			"$.Address.zip":  int64(8015),
+			"$.Accepted":     true,
 
 			// should not be used
 			"$.SkipThis": "FOOBAR",
@@ -56,6 +67,7 @@ func TestUnmarshalStruct(t *testing.T) {
 		AgeInYears: 21,
 		Tags:       Tags{"foo", "bar"},
 		Height:     1.76,
+		Accepted:   true,
 		Address: &Address{
 			City:    "Zürich",
 			ZipCode: 8015,
@@ -296,6 +308,81 @@ func TestNaming_MultipleEmbeddedTypes(t *testing.T) {
 	})
 }
 
+func TestUnsupportedType(t *testing.T) {
+	type Struct struct{ A any }
+
+	_, err := UnmarshalNew[Struct](dummySourceValue{})
+
+	var notSupportedError NotSupportedError
+	require.ErrorAs(t, err, &notSupportedError)
+	require.Equal(t, notSupportedError.Type, reflect.TypeFor[any]())
+}
+
+func TestTypeUint(t *testing.T) {
+	type Struct struct{ A uint }
+
+	parsed, err := UnmarshalNew[Struct](dummySourceValue{
+		Values: map[string]any{".A": int64(1234)},
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, parsed, Struct{A: 1234})
+}
+
+func TestNegativeUIntValues(t *testing.T) {
+	type Struct struct{ A uint64 }
+
+	_, err := UnmarshalNew[Struct](dummySourceValue{
+		Values: map[string]any{".A": int64(-1)},
+	})
+
+	require.Error(t, err)
+}
+
+func TestDecoderWithStructTag(t *testing.T) {
+	type Struct struct {
+		Foo string `url:"foo"`
+	}
+
+	sourceValue := dummySourceValue{
+		Values: map[string]any{".foo": "Works"},
+	}
+
+	dec := NewDecoder().WithTag("url")
+
+	parsed, err := UnmarshalNewWith[Struct](dec, sourceValue)
+	require.NoError(t, err)
+	require.Equal(t, parsed, Struct{Foo: "Works"})
+}
+
+func TestDecoderRequireValues(t *testing.T) {
+	type Struct struct {
+		Foo string
+	}
+
+	sourceValue := emptySourceValue{}
+
+	dec := NewDecoder().RequireValues()
+
+	_, err := UnmarshalNewWith[Struct](dec, sourceValue)
+	require.ErrorIs(t, err, ErrNoValue)
+}
+
+func TestDecoderTextUnmarshalerInterface(t *testing.T) {
+	type Struct struct {
+		Foo encoding.TextUnmarshaler
+	}
+
+	_, err := UnmarshalNew[Struct](dummySourceValue{})
+	require.ErrorIs(t, err, NotSupportedError{Type: reflect.TypeFor[encoding.TextUnmarshaler]()})
+}
+
+type emptySourceValue struct{ InvalidTypeValue }
+
+func (e emptySourceValue) Get(key string) (SourceValue, error) {
+	return nil, ErrNoValue
+}
+
 type Tags []string
 
 func (t *Tags) UnmarshalText(text []byte) error {
@@ -303,7 +390,7 @@ func (t *Tags) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func TestUnmarshalIP(t *testing.T) {
+func TestTextUnmarshaler(t *testing.T) {
 	studentSource := dummySourceValue{
 		Values: map[string]any{
 			".Host": "127.0.0.1",
@@ -438,7 +525,7 @@ func (d dummySourceValue) Float() (float64, error) {
 }
 
 func (d dummySourceValue) Bool() (bool, error) {
-	panic("implement me")
+	return true, nil
 }
 
 func (d dummySourceValue) Iter() (iter.Seq[SourceValue], error) {
