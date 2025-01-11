@@ -374,10 +374,14 @@ func TestDecoderTextUnmarshalerInterface(t *testing.T) {
 	require.ErrorIs(t, err, NotSupportedError{Type: reflect.TypeFor[encoding.TextUnmarshaler]()})
 }
 
-type emptySourceValue struct{ InvalidTypeValue }
+type emptySourceValue struct{ EmptyValue }
 
 func (e emptySourceValue) Get(key string) (SourceValue, error) {
 	return nil, ErrNoValue
+}
+
+func (e emptySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
+	return nil, ErrNotSupported
 }
 
 type Tags []string
@@ -515,7 +519,7 @@ func (d dummySourceValue) Float() (float64, error) {
 			return floatValue, nil
 		}
 
-		return 0, ErrInvalidType
+		return 0, ErrNotSupported
 	}
 
 	return 3.14159, nil
@@ -540,7 +544,7 @@ func (d dummySourceValue) Iter() (iter.Seq[SourceValue], error) {
 		}
 	}
 
-	return nil, ErrInvalidType
+	return nil, ErrNotSupported
 }
 
 func (d dummySourceValue) Int() (int64, error) {
@@ -549,7 +553,7 @@ func (d dummySourceValue) Int() (int64, error) {
 			return intValue, nil
 		}
 
-		return 0, ErrInvalidType
+		return 0, ErrNotSupported
 	}
 
 	return 1234, nil
@@ -561,7 +565,7 @@ func (d dummySourceValue) String() (string, error) {
 			return strValue, nil
 		}
 
-		return "", ErrInvalidType
+		return "", ErrNotSupported
 	}
 
 	return "foobar", nil
@@ -596,6 +600,10 @@ func (b binarySourceValue) Get(key string) (SourceValue, error) {
 	return b, nil
 }
 
+func (b binarySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
+	return nil, ErrNotSupported
+}
+
 func (b binarySourceValue) Bool() (bool, error) {
 	var buf [1]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
@@ -607,12 +615,12 @@ func (b binarySourceValue) Bool() (bool, error) {
 
 func (b binarySourceValue) Int() (int64, error) {
 	// no support for unsized int types
-	return 0, ErrInvalidType
+	return 0, ErrNotSupported
 }
 
 func (b binarySourceValue) Float() (float64, error) {
 	// no support for unsized int types
-	return 0, ErrInvalidType
+	return 0, ErrNotSupported
 }
 
 func (b binarySourceValue) String() (string, error) {
@@ -839,7 +847,7 @@ func (r rawJsonSource) Int() (int64, error) {
 		return value.Int64()
 
 	default:
-		return 0, ErrInvalidType
+		return 0, ErrNotSupported
 	}
 }
 
@@ -869,7 +877,7 @@ func (r rawJsonSource) String() (string, error) {
 		return value.String(), nil
 
 	case map[string]any, []any:
-		return "", ErrInvalidType
+		return "", ErrNotSupported
 
 	default:
 		return fmt.Sprintf("%v", r.value), nil

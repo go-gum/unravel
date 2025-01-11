@@ -9,8 +9,8 @@ import (
 	"sync"
 )
 
-var ErrInvalidType = errors.New("invalid type")
 var ErrNoValue = errors.New("no value")
+var ErrNotSupported = errors.New("not supported")
 
 type NotSupportedError struct {
 	Type reflect.Type
@@ -54,7 +54,7 @@ type Decoder struct {
 	setterCache sync.Map
 
 	// Require values for fields. Set to true to fail with ErrNoValue
-	// if a value is missing in a ContainerSourceValue
+	// if a value is missing in a MapSourceValue
 	requireValues bool
 }
 
@@ -187,13 +187,13 @@ func (d *Decoder) makeSetStruct(inConstruction typeSet, ty reflect.Type) (setter
 	}
 
 	setter := func(source SourceValue, target reflect.Value) error {
-		containerSource, ok := source.(ContainerSourceValue)
+		mapSource, ok := source.(MapSourceValue)
 		if !ok {
-			return ErrInvalidType
+			return ErrNotSupported
 		}
 
 		for idx, field := range fields {
-			fieldSource, err := containerSource.Get(field.Name)
+			fieldSource, err := mapSource.Get(field.Name)
 			switch {
 			case errors.Is(err, ErrNoValue):
 				if d.requireValues {
@@ -235,7 +235,7 @@ func (d *Decoder) makeSetMap(inConstruction typeSet, ty reflect.Type) (setter, e
 	setter := func(source SourceValue, target reflect.Value) error {
 		mapSource, ok := source.(MapSourceValue)
 		if !ok {
-			return ErrInvalidType
+			return ErrNotSupported
 		}
 
 		keyValues, err := mapSource.KeyValues()
@@ -279,7 +279,7 @@ func (d *Decoder) makeSetSlice(inConstruction typeSet, ty reflect.Type) (setter,
 	setter := func(source SourceValue, target reflect.Value) error {
 		sliceSource, ok := source.(SliceSourceValue)
 		if !ok {
-			return ErrInvalidType
+			return ErrNotSupported
 		}
 
 		sourceIter, err := sliceSource.Iter()
@@ -316,7 +316,7 @@ func (d *Decoder) makeSetArray(inConstruction typeSet, ty reflect.Type) (setter,
 	setter := func(source SourceValue, target reflect.Value) error {
 		sliceSource, ok := source.(SliceSourceValue)
 		if !ok {
-			return ErrInvalidType
+			return ErrNotSupported
 		}
 
 		sourceIter, err := sliceSource.Iter()

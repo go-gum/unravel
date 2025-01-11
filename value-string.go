@@ -76,7 +76,7 @@ func handleSyntaxErr[T any](inputValue string, value T, err error) (T, error) {
 	var zeroValue T
 	if errors.Is(err, strconv.ErrSyntax) {
 		err := fmt.Errorf("parse number %q: %w", inputValue, err)
-		return zeroValue, errors.Join(err, ErrInvalidType)
+		return zeroValue, errors.Join(err, ErrNotSupported)
 	}
 
 	if err != nil {
