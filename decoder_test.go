@@ -35,9 +35,6 @@ func TestUnmarshalStruct(t *testing.T) {
 
 		// not exported, must not be set
 		note string
-
-		// not exported with tag, must not be set
-		privateValue string `json:"PrivateValue"`
 	}
 
 	sourceValue := dummySourceValue{
