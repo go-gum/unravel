@@ -338,18 +338,23 @@ func TestNegativeUIntValues(t *testing.T) {
 
 func TestDecoderWithStructTag(t *testing.T) {
 	type Struct struct {
-		Foo string `url:"foo"`
+		Foo string `url:"foo" json:"bar"`
 	}
 
 	sourceValue := dummySourceValue{
-		Values: map[string]any{".foo": "Works"},
+		Values: map[string]any{".foo": "Url", ".bar": "Json"},
 	}
 
-	dec := NewDecoder().WithTag("url")
-
+	dec := NewDecoder().WithTag("json")
 	parsed, err := UnmarshalNewWith[Struct](dec, sourceValue)
 	require.NoError(t, err)
-	require.Equal(t, parsed, Struct{Foo: "Works"})
+	require.Equal(t, parsed, Struct{Foo: "Json"})
+
+	dec = dec.WithTag("url")
+
+	parsed, err = UnmarshalNewWith[Struct](dec, sourceValue)
+	require.NoError(t, err)
+	require.Equal(t, parsed, Struct{Foo: "Url"})
 }
 
 func TestDecoderRequireValues(t *testing.T) {

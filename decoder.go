@@ -4,9 +4,13 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/constraints"
 	"iter"
+	"math"
 	"reflect"
+	"strconv"
 	"sync"
+	"unsafe"
 )
 
 var ErrNoValue = errors.New("no value")
@@ -135,11 +139,49 @@ func (d *Decoder) makeSetterOf(inConstruction typeSet, ty reflect.Type) (setter,
 	case reflect.Bool:
 		return setBool, nil
 
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return setInt, nil
+	case reflect.Int:
+		switch unsafe.Sizeof(int(int8(0))) {
+		case 4:
+			return makeSetInt(IntSourceValue.Int32, reflect.Value.SetInt, math.MinInt, math.MaxInt, false), nil
+		case 8:
+			return makeSetInt(IntSourceValue.Int64, reflect.Value.SetInt, math.MinInt, math.MaxInt, false), nil
+		default:
+			panic("int must be 4 or 8 byte")
+		}
 
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return setUint, nil
+	case reflect.Int8:
+		return makeSetInt(IntSourceValue.Int8, reflect.Value.SetInt, math.MinInt8, math.MaxInt8, false), nil
+
+	case reflect.Int16:
+		return makeSetInt(IntSourceValue.Int16, reflect.Value.SetInt, math.MinInt16, math.MaxInt16, false), nil
+
+	case reflect.Int32:
+		return makeSetInt(IntSourceValue.Int32, reflect.Value.SetInt, math.MinInt32, math.MaxInt32, false), nil
+
+	case reflect.Int64:
+		return makeSetInt(IntSourceValue.Int64, reflect.Value.SetInt, math.MinInt64, math.MaxInt64, false), nil
+
+	case reflect.Uint:
+		switch unsafe.Sizeof(uint(0)) {
+		case 4:
+			return makeSetInt(IntSourceValue.Uint32, reflect.Value.SetUint, 0, math.MaxUint, true), nil
+		case 8:
+			return makeSetInt(IntSourceValue.Uint64, reflect.Value.SetUint, 0, math.MaxUint, true), nil
+		default:
+			panic("uint must be 4 or 8 byte")
+		}
+
+	case reflect.Uint8:
+		return makeSetInt(IntSourceValue.Uint8, reflect.Value.SetUint, 0, math.MaxUint8, true), nil
+
+	case reflect.Uint16:
+		return makeSetInt(IntSourceValue.Uint16, reflect.Value.SetUint, 0, math.MaxUint16, true), nil
+
+	case reflect.Uint32:
+		return makeSetInt(IntSourceValue.Uint32, reflect.Value.SetUint, 0, math.MaxUint32, true), nil
+
+	case reflect.Uint64:
+		return makeSetInt(IntSourceValue.Uint64, reflect.Value.SetUint, 0, math.MaxUint64, true), nil
 
 	case reflect.Float32, reflect.Float64:
 		return setFloat, nil
@@ -379,114 +421,46 @@ func setBool(source SourceValue, target reflect.Value) error {
 	return nil
 }
 
-func setInt(source SourceValue, target reflect.Value) error {
-	if intSource, ok := source.(IntSourceValue); ok {
-		switch target.Kind() {
-		case reflect.Int8:
-			intValue, err := intSource.Int8()
+func makeSetInt[T constraints.Integer | constraints.Unsigned, V uint64 | int64](
+	parse func(IntSourceValue) (T, error),
+	setValue func(reflect.Value, V),
+	minValue, maxValue V,
+	isUnsigned bool,
+) setter {
+	return func(source SourceValue, target reflect.Value) error {
+		if intSource, ok := source.(IntSourceValue); ok {
+			parsedValue, err := parse(intSource)
 			if err != nil {
-				return fmt.Errorf("get int8 value: %w", err)
+				return fmt.Errorf("get %T value: %w", parsedValue, err)
 			}
 
-			target.SetInt(int64(intValue))
+			setValue(target, V(parsedValue))
 			return nil
-
-		case reflect.Int16:
-			intValue, err := intSource.Int16()
-			if err != nil {
-				return fmt.Errorf("get int16 value: %w", err)
-			}
-
-			target.SetInt(int64(intValue))
-			return nil
-
-		case reflect.Int32:
-			intValue, err := intSource.Int32()
-			if err != nil {
-				return fmt.Errorf("get int32 value: %w", err)
-			}
-
-			target.SetInt(int64(intValue))
-			return nil
-
-		case reflect.Int64:
-			intValue, err := intSource.Int64()
-			if err != nil {
-				return fmt.Errorf("get int64 value: %w", err)
-			}
-
-			target.SetInt(intValue)
-			return nil
-
-		default:
-			// nothing, continue with SourceValue.Int
 		}
-	}
 
-	intValue, err := source.Int()
-	if err != nil {
-		return fmt.Errorf("get int value: %w", err)
-	}
-
-	target.SetInt(intValue)
-	return nil
-}
-
-func setUint(source SourceValue, target reflect.Value) error {
-	if intSource, ok := source.(IntSourceValue); ok {
-		switch target.Kind() {
-		case reflect.Uint8:
-			intValue, err := intSource.Uint8()
-			if err != nil {
-				return fmt.Errorf("get int8 value: %w", err)
-			}
-
-			target.SetUint(uint64(intValue))
-			return nil
-
-		case reflect.Uint16:
-			intValue, err := intSource.Uint16()
-			if err != nil {
-				return fmt.Errorf("get int16 value: %w", err)
-			}
-
-			target.SetUint(uint64(intValue))
-			return nil
-
-		case reflect.Uint32:
-			intValue, err := intSource.Uint32()
-			if err != nil {
-				return fmt.Errorf("get int32 value: %w", err)
-			}
-
-			target.SetUint(uint64(intValue))
-			return nil
-
-		case reflect.Uint64:
-			intValue, err := intSource.Uint64()
-			if err != nil {
-				return fmt.Errorf("get int64 value: %w", err)
-			}
-
-			target.SetUint(intValue)
-			return nil
-
-		default:
-			// nothing, continue with SourceValue.Uint
+		// no int source, need to fallback to SourceValue.Int
+		intValue, err := source.Int()
+		if err != nil {
+			return fmt.Errorf("get int value: %w", err)
 		}
-	}
 
-	intValue, err := source.Int()
-	if err != nil {
-		return fmt.Errorf("get int value: %w", err)
-	}
+		var vZero V
 
-	if intValue < 0 {
-		return fmt.Errorf("invalid uint value %d", intValue)
-	}
+		if isUnsigned && intValue < 0 {
+			return ErrNotSupported
+		}
 
-	target.SetUint(uint64(intValue))
-	return nil
+		if V(intValue) < minValue {
+			return fmt.Errorf("invalid %T value %d: %w", vZero, intValue, strconv.ErrRange)
+		}
+
+		if V(intValue) > maxValue {
+			return fmt.Errorf("invalid %T value: %d: %w", vZero, intValue, strconv.ErrRange)
+		}
+
+		setValue(target, V(intValue))
+		return nil
+	}
 }
 
 func setFloat(source SourceValue, target reflect.Value) error {
