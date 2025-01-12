@@ -14,7 +14,7 @@ func TestStringValue(t *testing.T) {
 }
 
 func TestSimpleStringValue(t *testing.T) {
-	runSourceValueTests(t, toSimpleStringValue, uint64(math.MaxUint64)/2)
+	runSourceValueTests(t, toSimpleStringValue, math.MaxUint64)
 }
 
 func runSourceValueTests(t *testing.T, toStringSource func(value string) SourceValue, maxUint64 uint64) {
@@ -193,6 +193,9 @@ func (s simpleStringValue) Float() (float64, error) {
 
 func (s simpleStringValue) Int() (int64, error) {
 	return StringValue(s.Value).Int()
+}
+func (s simpleStringValue) Uint() (uint64, error) {
+	return StringValue(s.Value).Uint()
 }
 
 func (s simpleStringValue) String() (string, error) {

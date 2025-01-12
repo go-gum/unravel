@@ -14,6 +14,10 @@ func (i EmptyValue) Int() (int64, error) {
 	return 0, ErrNotSupported
 }
 
+func (i EmptyValue) Uint() (uint64, error) {
+	return 0, ErrNotSupported
+}
+
 func (i EmptyValue) Float() (float64, error) {
 	return 0, ErrNotSupported
 }

@@ -142,46 +142,46 @@ func (d *Decoder) makeSetterOf(inConstruction typeSet, ty reflect.Type) (setter,
 	case reflect.Int:
 		switch unsafe.Sizeof(int(int8(0))) {
 		case 4:
-			return makeSetInt(IntSourceValue.Int32, reflect.Value.SetInt, math.MinInt, math.MaxInt, false), nil
+			return makeSetInt(IntSourceValue.Int32, math.MinInt, math.MaxInt), nil
 		case 8:
-			return makeSetInt(IntSourceValue.Int64, reflect.Value.SetInt, math.MinInt, math.MaxInt, false), nil
+			return makeSetInt(IntSourceValue.Int64, math.MinInt, math.MaxInt), nil
 		default:
 			panic("int must be 4 or 8 byte")
 		}
 
 	case reflect.Int8:
-		return makeSetInt(IntSourceValue.Int8, reflect.Value.SetInt, math.MinInt8, math.MaxInt8, false), nil
+		return makeSetInt(IntSourceValue.Int8, math.MinInt8, math.MaxInt8), nil
 
 	case reflect.Int16:
-		return makeSetInt(IntSourceValue.Int16, reflect.Value.SetInt, math.MinInt16, math.MaxInt16, false), nil
+		return makeSetInt(IntSourceValue.Int16, math.MinInt16, math.MaxInt16), nil
 
 	case reflect.Int32:
-		return makeSetInt(IntSourceValue.Int32, reflect.Value.SetInt, math.MinInt32, math.MaxInt32, false), nil
+		return makeSetInt(IntSourceValue.Int32, math.MinInt32, math.MaxInt32), nil
 
 	case reflect.Int64:
-		return makeSetInt(IntSourceValue.Int64, reflect.Value.SetInt, math.MinInt64, math.MaxInt64, false), nil
+		return makeSetInt(IntSourceValue.Int64, math.MinInt64, math.MaxInt64), nil
 
 	case reflect.Uint:
 		switch unsafe.Sizeof(uint(0)) {
 		case 4:
-			return makeSetInt(IntSourceValue.Uint32, reflect.Value.SetUint, 0, math.MaxUint, true), nil
+			return makeSetUint(IntSourceValue.Uint32, math.MaxUint), nil
 		case 8:
-			return makeSetInt(IntSourceValue.Uint64, reflect.Value.SetUint, 0, math.MaxUint, true), nil
+			return makeSetUint(IntSourceValue.Uint64, math.MaxUint), nil
 		default:
 			panic("uint must be 4 or 8 byte")
 		}
 
 	case reflect.Uint8:
-		return makeSetInt(IntSourceValue.Uint8, reflect.Value.SetUint, 0, math.MaxUint8, true), nil
+		return makeSetUint(IntSourceValue.Uint8, math.MaxUint8), nil
 
 	case reflect.Uint16:
-		return makeSetInt(IntSourceValue.Uint16, reflect.Value.SetUint, 0, math.MaxUint16, true), nil
+		return makeSetUint(IntSourceValue.Uint16, math.MaxUint16), nil
 
 	case reflect.Uint32:
-		return makeSetInt(IntSourceValue.Uint32, reflect.Value.SetUint, 0, math.MaxUint32, true), nil
+		return makeSetUint(IntSourceValue.Uint32, math.MaxUint32), nil
 
 	case reflect.Uint64:
-		return makeSetInt(IntSourceValue.Uint64, reflect.Value.SetUint, 0, math.MaxUint64, true), nil
+		return makeSetUint(IntSourceValue.Uint64, math.MaxUint64), nil
 
 	case reflect.Float32, reflect.Float64:
 		return setFloat, nil
@@ -421,11 +421,9 @@ func setBool(source SourceValue, target reflect.Value) error {
 	return nil
 }
 
-func makeSetInt[T constraints.Integer | constraints.Unsigned, V uint64 | int64](
+func makeSetInt[T constraints.Integer](
 	parse func(IntSourceValue) (T, error),
-	setValue func(reflect.Value, V),
-	minValue, maxValue V,
-	isUnsigned bool,
+	minValue, maxValue int64,
 ) setter {
 	return func(source SourceValue, target reflect.Value) error {
 		if intSource, ok := source.(IntSourceValue); ok {
@@ -434,7 +432,7 @@ func makeSetInt[T constraints.Integer | constraints.Unsigned, V uint64 | int64](
 				return fmt.Errorf("get %T value: %w", parsedValue, err)
 			}
 
-			setValue(target, V(parsedValue))
+			target.SetInt(int64(parsedValue))
 			return nil
 		}
 
@@ -444,21 +442,49 @@ func makeSetInt[T constraints.Integer | constraints.Unsigned, V uint64 | int64](
 			return fmt.Errorf("get int value: %w", err)
 		}
 
-		var vZero V
+		var tZero T
 
-		if isUnsigned && intValue < 0 {
-			return ErrNotSupported
+		if intValue < minValue {
+			return fmt.Errorf("invalid %T value %d: %w", tZero, intValue, strconv.ErrRange)
 		}
 
-		if V(intValue) < minValue {
-			return fmt.Errorf("invalid %T value %d: %w", vZero, intValue, strconv.ErrRange)
+		if intValue > maxValue {
+			return fmt.Errorf("invalid %T value: %d: %w", tZero, intValue, strconv.ErrRange)
 		}
 
-		if V(intValue) > maxValue {
-			return fmt.Errorf("invalid %T value: %d: %w", vZero, intValue, strconv.ErrRange)
+		target.SetInt(intValue)
+		return nil
+	}
+}
+
+func makeSetUint[T constraints.Unsigned](
+	parse func(IntSourceValue) (T, error),
+	maxValue uint64,
+) setter {
+	return func(source SourceValue, target reflect.Value) error {
+		if intSource, ok := source.(IntSourceValue); ok {
+			parsedValue, err := parse(intSource)
+			if err != nil {
+				return fmt.Errorf("get %T value: %w", parsedValue, err)
+			}
+
+			target.SetUint(uint64(parsedValue))
+			return nil
 		}
 
-		setValue(target, V(intValue))
+		// no int source, need to fallback to SourceValue.Int
+		intValue, err := source.Uint()
+		if err != nil {
+			return fmt.Errorf("get uint value: %w", err)
+		}
+
+		var tZero T
+
+		if intValue > maxValue {
+			return fmt.Errorf("invalid %T value: %d: %w", tZero, intValue, strconv.ErrRange)
+		}
+
+		target.SetUint(intValue)
 		return nil
 	}
 }

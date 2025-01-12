@@ -16,6 +16,10 @@ type SourceValue interface {
 	// Returns error ErrNotSupported if the value can not be represented as such.
 	Int() (int64, error)
 
+	// Uint returns the current value as an uint64.
+	// Returns error ErrNotSupported if the value can not be represented as such.
+	Uint() (uint64, error)
+
 	// Float returns the current value as a float64.
 	// Returns error ErrNotSupported if the value can not be represented as such.
 	Float() (float64, error)

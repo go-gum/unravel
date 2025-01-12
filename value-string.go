@@ -63,6 +63,11 @@ func (s StringValue) Int() (int64, error) {
 	return handleSyntaxErr(string(s), parsedValue, err)
 }
 
+func (s StringValue) Uint() (uint64, error) {
+	parsedValue, err := strconv.ParseUint(string(s), 10, 64)
+	return handleSyntaxErr(string(s), parsedValue, err)
+}
+
 func (s StringValue) Float() (float64, error) {
 	parsedValue, err := strconv.ParseFloat(string(s), 64)
 	return handleSyntaxErr(string(s), parsedValue, err)

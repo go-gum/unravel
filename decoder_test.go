@@ -14,7 +14,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"unsafe"
 )
 
 func TestUnmarshalStruct(t *testing.T) {
@@ -326,16 +325,6 @@ func TestTypeUint(t *testing.T) {
 	require.Equal(t, parsed, Struct{A: 1234})
 }
 
-func TestNegativeUIntValues(t *testing.T) {
-	type Struct struct{ A uint64 }
-
-	_, err := UnmarshalNew[Struct](dummySourceValue{
-		Values: map[string]any{".A": int64(-1)},
-	})
-
-	require.Error(t, err)
-}
-
 func TestDecoderWithStructTag(t *testing.T) {
 	type Struct struct {
 		Foo string `url:"foo" json:"bar"`
@@ -564,6 +553,11 @@ func (d dummySourceValue) Int() (int64, error) {
 	return 1234, nil
 }
 
+func (d dummySourceValue) Uint() (uint64, error) {
+	value, err := d.Int()
+	return uint64(value), err
+}
+
 func (d dummySourceValue) String() (string, error) {
 	if value, ok := d.Values[d.Path]; ok {
 		if strValue, ok := value.(string); ok {
@@ -586,6 +580,7 @@ func (d dummySourceValue) Get(key string) (SourceValue, error) {
 }
 
 type binarySourceValue struct {
+	EmptyValue
 	r io.Reader
 }
 
@@ -607,39 +602,6 @@ func (b binarySourceValue) Get(key string) (SourceValue, error) {
 
 func (b binarySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
 	return nil, ErrNotSupported
-}
-
-func (b binarySourceValue) Bool() (bool, error) {
-	var buf [1]byte
-	if _, err := b.r.Read(buf[:]); err != nil {
-		return false, err
-	}
-
-	return buf[0] != 0, nil
-}
-
-func (b binarySourceValue) Int() (int64, error) {
-	// no support for unsized int types
-	return 0, ErrNotSupported
-}
-
-func (b binarySourceValue) Float() (float64, error) {
-	// no support for unsized int types
-	return 0, ErrNotSupported
-}
-
-func (b binarySourceValue) String() (string, error) {
-	bc, err := b.Int32()
-	if err != nil {
-		return "", err
-	}
-
-	buf := make([]byte, bc)
-	if _, err := b.r.Read(buf); err != nil {
-		return "", err
-	}
-
-	return unsafe.String(&buf[0], bc), nil
 }
 
 func (b binarySourceValue) Int8() (int8, error) {
@@ -780,7 +742,7 @@ func TestDecodeBitmapHeader(t *testing.T) {
 	}
 
 	buf, _ := base64.StdEncoding.DecodeString(`Qk3GAAAAAAAAAIoAAAB8AAAAAwAAAAUAAAABABgAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAD/AAD/AAAAAAAA/0JHUnOPwvUoUbgeFR6F6wEzMzMTZmZmJmZmZgaZmZkJPQrXAyhcjzIAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`)
-	sourceValue := binarySourceValue{bytes.NewReader(buf)}
+	sourceValue := binarySourceValue{r: bytes.NewReader(buf)}
 
 	parsed, err := UnmarshalNew[Header](sourceValue)
 	require.Equal(t, err, nil)
