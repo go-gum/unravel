@@ -38,27 +38,28 @@ func UnmarshalNewWith[T any](dec *Decoder, source SourceValue) (T, error) {
 	return target, err
 }
 
-// A setter sets the reflect.Value to a value extracted from the given SourceValue
+// A setter sets a [reflect.Value] to a value extracted from the given [SourceValue]
 type setter func(SourceValue, reflect.Value) error
 
-// A set of types that are currently in construction
+// A set of types
 type typeSet map[reflect.Type]struct{}
 
 var tyTextUnmarshaler = reflect.TypeFor[encoding.TextUnmarshaler]()
 
-// The default Decoder instance.
+// The default [Decoder] instance.
 var dec Decoder
 
-// Decoder can be used to customize unmarshalling. This type is typesafe.
+// Decoder can be used to customize unmarshalling.
+// A decoder is threadsafe once created.
 type Decoder struct {
-	// the struct tag that is used
+	// The struct tag that is used
 	structTag string
 
-	// Cache for setters, indexed by reflect.Type
+	// Cache for setters, indexed by [reflect.Type]
 	setterCache sync.Map
 
-	// Require values for fields. Set to true to fail with ErrNoValue
-	// if a value is missing in a MapSourceValue
+	// Require values for struct fields. Set to true to fail with ErrNoValue
+	// if a call to [SourceValue.Get] returns [ErrNoValue].
 	requireValues bool
 }
 
@@ -142,46 +143,46 @@ func (d *Decoder) makeSetterOf(inConstruction typeSet, ty reflect.Type) (setter,
 	case reflect.Int:
 		switch unsafe.Sizeof(int(int8(0))) {
 		case 4:
-			return makeSetInt(IntSourceValue.Int32, math.MinInt, math.MaxInt), nil
+			return makeSetInt(BinarySourceValue.Int32, math.MinInt, math.MaxInt), nil
 		case 8:
-			return makeSetInt(IntSourceValue.Int64, math.MinInt, math.MaxInt), nil
+			return makeSetInt(BinarySourceValue.Int64, math.MinInt, math.MaxInt), nil
 		default:
 			panic("int must be 4 or 8 byte")
 		}
 
 	case reflect.Int8:
-		return makeSetInt(IntSourceValue.Int8, math.MinInt8, math.MaxInt8), nil
+		return makeSetInt(BinarySourceValue.Int8, math.MinInt8, math.MaxInt8), nil
 
 	case reflect.Int16:
-		return makeSetInt(IntSourceValue.Int16, math.MinInt16, math.MaxInt16), nil
+		return makeSetInt(BinarySourceValue.Int16, math.MinInt16, math.MaxInt16), nil
 
 	case reflect.Int32:
-		return makeSetInt(IntSourceValue.Int32, math.MinInt32, math.MaxInt32), nil
+		return makeSetInt(BinarySourceValue.Int32, math.MinInt32, math.MaxInt32), nil
 
 	case reflect.Int64:
-		return makeSetInt(IntSourceValue.Int64, math.MinInt64, math.MaxInt64), nil
+		return makeSetInt(BinarySourceValue.Int64, math.MinInt64, math.MaxInt64), nil
 
 	case reflect.Uint:
 		switch unsafe.Sizeof(uint(0)) {
 		case 4:
-			return makeSetUint(IntSourceValue.Uint32, math.MaxUint), nil
+			return makeSetUint(BinarySourceValue.Uint32, math.MaxUint), nil
 		case 8:
-			return makeSetUint(IntSourceValue.Uint64, math.MaxUint), nil
+			return makeSetUint(BinarySourceValue.Uint64, math.MaxUint), nil
 		default:
 			panic("uint must be 4 or 8 byte")
 		}
 
 	case reflect.Uint8:
-		return makeSetUint(IntSourceValue.Uint8, math.MaxUint8), nil
+		return makeSetUint(BinarySourceValue.Uint8, math.MaxUint8), nil
 
 	case reflect.Uint16:
-		return makeSetUint(IntSourceValue.Uint16, math.MaxUint16), nil
+		return makeSetUint(BinarySourceValue.Uint16, math.MaxUint16), nil
 
 	case reflect.Uint32:
-		return makeSetUint(IntSourceValue.Uint32, math.MaxUint32), nil
+		return makeSetUint(BinarySourceValue.Uint32, math.MaxUint32), nil
 
 	case reflect.Uint64:
-		return makeSetUint(IntSourceValue.Uint64, math.MaxUint64), nil
+		return makeSetUint(BinarySourceValue.Uint64, math.MaxUint64), nil
 
 	case reflect.Float32, reflect.Float64:
 		return setFloat, nil
@@ -229,13 +230,8 @@ func (d *Decoder) makeSetStruct(inConstruction typeSet, ty reflect.Type) (setter
 	}
 
 	setter := func(source SourceValue, target reflect.Value) error {
-		mapSource, ok := source.(MapSourceValue)
-		if !ok {
-			return ErrNotSupported
-		}
-
 		for idx, field := range fields {
-			fieldSource, err := mapSource.Get(field.Name)
+			fieldSource, err := source.Get(field.Name)
 			switch {
 			case errors.Is(err, ErrNoValue):
 				if d.requireValues {
@@ -275,12 +271,7 @@ func (d *Decoder) makeSetMap(inConstruction typeSet, ty reflect.Type) (setter, e
 	valueType := ty.Elem()
 
 	setter := func(source SourceValue, target reflect.Value) error {
-		mapSource, ok := source.(MapSourceValue)
-		if !ok {
-			return ErrNotSupported
-		}
-
-		keyValues, err := mapSource.KeyValues()
+		keyValues, err := source.KeyValues()
 		if err != nil {
 			return fmt.Errorf("iterate key/value pairs: %w", err)
 		}
@@ -319,12 +310,7 @@ func (d *Decoder) makeSetSlice(inConstruction typeSet, ty reflect.Type) (setter,
 	placeholderValue := reflect.New(ty.Elem()).Elem()
 
 	setter := func(source SourceValue, target reflect.Value) error {
-		sliceSource, ok := source.(SliceSourceValue)
-		if !ok {
-			return ErrNotSupported
-		}
-
-		sourceIter, err := sliceSource.Iter()
+		sourceIter, err := source.Iter()
 		if err != nil {
 			return fmt.Errorf("as iter: %w", err)
 		}
@@ -356,12 +342,7 @@ func (d *Decoder) makeSetArray(inConstruction typeSet, ty reflect.Type) (setter,
 	elementCount := ty.Len()
 
 	setter := func(source SourceValue, target reflect.Value) error {
-		sliceSource, ok := source.(SliceSourceValue)
-		if !ok {
-			return ErrNotSupported
-		}
-
-		sourceIter, err := sliceSource.Iter()
+		sourceIter, err := source.Iter()
 		if err != nil {
 			return fmt.Errorf("as iter: %w", err)
 		}
@@ -422,11 +403,11 @@ func setBool(source SourceValue, target reflect.Value) error {
 }
 
 func makeSetInt[T constraints.Integer](
-	parse func(IntSourceValue) (T, error),
+	parse func(BinarySourceValue) (T, error),
 	minValue, maxValue int64,
 ) setter {
 	return func(source SourceValue, target reflect.Value) error {
-		if intSource, ok := source.(IntSourceValue); ok {
+		if intSource, ok := source.(BinarySourceValue); ok {
 			parsedValue, err := parse(intSource)
 			if err != nil {
 				return fmt.Errorf("get %T value: %w", parsedValue, err)
@@ -458,11 +439,11 @@ func makeSetInt[T constraints.Integer](
 }
 
 func makeSetUint[T constraints.Unsigned](
-	parse func(IntSourceValue) (T, error),
+	parse func(BinarySourceValue) (T, error),
 	maxValue uint64,
 ) setter {
 	return func(source SourceValue, target reflect.Value) error {
-		if intSource, ok := source.(IntSourceValue); ok {
+		if intSource, ok := source.(BinarySourceValue); ok {
 			parsedValue, err := parse(intSource)
 			if err != nil {
 				return fmt.Errorf("get %T value: %w", parsedValue, err)

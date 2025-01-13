@@ -180,6 +180,7 @@ func toSimpleStringValue(value string) SourceValue {
 }
 
 type simpleStringValue struct {
+	EmptyValue
 	Value string
 }
 
@@ -194,10 +195,7 @@ func (s simpleStringValue) Float() (float64, error) {
 func (s simpleStringValue) Int() (int64, error) {
 	return StringValue(s.Value).Int()
 }
+
 func (s simpleStringValue) Uint() (uint64, error) {
 	return StringValue(s.Value).Uint()
-}
-
-func (s simpleStringValue) String() (string, error) {
-	return "", ErrNotSupported
 }

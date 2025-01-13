@@ -676,6 +676,14 @@ func (b binarySourceValue) Uint64() (uint64, error) {
 	return binary.LittleEndian.Uint64(buf[:]), nil
 }
 
+func (b binarySourceValue) Float32() (float32, error) {
+	return 0, ErrNotSupported
+}
+
+func (b binarySourceValue) Float64() (float64, error) {
+	return 0, ErrNotSupported
+}
+
 func TestBinarySourceValue(t *testing.T) {
 	var values []byte
 	for idx := range 256 {

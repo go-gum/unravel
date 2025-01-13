@@ -1,5 +1,7 @@
 package serde
 
+import "iter"
+
 // EmptyValue is a SourceValue that returns ErrNotSupported for all conversion functions.
 // It is useful as an embedded base for your own custom SourceValue implementation.
 type EmptyValue struct{}
@@ -24,4 +26,16 @@ func (i EmptyValue) Float() (float64, error) {
 
 func (i EmptyValue) String() (string, error) {
 	return "", ErrNotSupported
+}
+
+func (i EmptyValue) Get(key string) (SourceValue, error) {
+	return nil, ErrNotSupported
+}
+
+func (i EmptyValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
+	return nil, ErrNotSupported
+}
+
+func (i EmptyValue) Iter() (iter.Seq[SourceValue], error) {
+	return nil, ErrNotSupported
 }
