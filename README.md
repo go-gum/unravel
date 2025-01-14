@@ -1,19 +1,51 @@
 # unravel
 
-Unravel provides a set of interfaces named `SourceValue` to define an abstract data model for source data.
-It then offers a `Unmarshal` function very similar to `json.Unmarshal` to unmarshal
-data from a `SourceValue` into a target type.
+[![Build Status](https://github.com/go-gum/unravel/actions/workflows/go.yml/badge.svg)](https://github.com/go-gum/unravel/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/go-gum/unravel#section-documentation.svg)](https://pkg.go.dev/github.com/go-gum/unravel#section-documentation)
+[![Go Report Card](https://goreportcard.com/badge/github.com/go-gum/unravel)](https://goreportcard.com/report/github.com/go-gum/unravel)
 
-It tries hard to keep the source value flexible to allow all kind of implementations.
-Some possible implementations are provided:
+Unravel is a Go package that provides an abstraction layer for working with serialized or structured data. At its core,
+it introduces the `SourceValue` interface, which defines an abstract data model for source data. The package also
+includes an `Unmarshal` function, enabling you to decode data from a `SourceValue` into a target Go type.
 
-* `StringValue` parses `string` values into the supported primitive types.
-* `PathParamSourceValue` gives access to path parameters of a `http.Request`.
-* `UrlValuesSourceValue` is an adapter for `url.Values`
-* `BinarySourceValue` can read binary data using `binary.Encoding`
-* `FakeSourceValue` Provides fake values for every data access, useful for testing
-* `GoSourceValue` provides access to all kinds of go values
+## Features
 
-## Further reading
+- **Flexible Data Access**: The `SourceValue` interface allows for diverse implementations, making it easy to adapt to
+  various data formats and structures.
+- **Unmarshal Functionality**: Decode data from a `SourceValue` into Go types like structs, slices, strings, and more.
+- **Extensibility**: Build custom `SourceValue` implementations to handle unique data sources or formats.
 
-* Initial groundwork for unravel: https://stuff.narf.zone/posts/unmarshal
+## Example
+
+```go
+// Example: Unmarshaling data from query values to a struct
+var qv url.Values = ... // parsed from /user?name=Alice&age=30
+
+source := urlSourceValue(qv)
+var person Person
+
+err := unravel.Unmarshal(source, &person)
+if err != nil {
+log.Fatal(err)
+}
+
+fmt.Printf("Name: %s, Age: %d\n", person.Name, person.Age)
+```
+
+## Flexible Implementations
+
+Unravel keeps the `SourceValue` interface deliberately flexible, allowing developers to implement it for various data
+sources. Here are some potential implementations:
+
+- **`PathParamSourceValue`**: Provides access to path parameters in an `http.Request`.
+- **`UrlValuesSourceValue`**: Adapts `url.Values` for query parameter decoding.
+- **`BinarySourceValue`**: Reads binary data using `binary.Encoding`, ideal for decoding binary protocols.
+- **`FakerSourceValue`**: Supplies fake values for every data access, useful for testing and simulations.
+- **`CopySourceValue`**: Copies data from a Go struct or map into another struct, similar to the functionality provided
+  by the `mapstructure` package.
+
+## Further Reading
+
+To dive deeper into the rationale and groundwork behind unravel, check out this
+post: https://stuff.narf.zone/posts/unmarshal
+

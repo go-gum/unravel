@@ -153,7 +153,7 @@ func nameOf(fi reflect.StructField, structTag string) (name string, explicit boo
 		return tag, true
 
 	case idx > 0:
-		// non emtpy alias, take up to comma
+		// non empty alias, take up to comma
 		return tag[:idx], true
 
 	default:
