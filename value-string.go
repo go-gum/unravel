@@ -7,9 +7,39 @@ import (
 	"strconv"
 )
 
-// StringValue adapts a `string` to a SourceValue.
-// It parses primitive values using strconv.ParseInt, strconv.ParseFloat
-// and strconv.ParseBool. string values are returned as is.
+// StringValue adapts a `string` to the [SourceValue] interface, providing a straightforward
+// implementation for working with textual data. It enables parsing of primitive types from
+// the underlying string representation using the following functions from the `strconv` package:
+//
+//   - `strconv.ParseInt` for parsing integers
+//   - `strconv.ParseFloat` for parsing floating-point numbers
+//   - `strconv.ParseBool` for parsing boolean values
+//
+// When requested as a string, the original value is returned as-is without modification.
+//
+// This implementation is particularly useful for source values where the data is represented
+// as strings but needs to be decoded into native Go types. Developers can use `StringValue`
+// directly or embed it within custom [SourceValue] implementations to inherit its parsing
+// functionality.
+//
+// Example:
+//
+//	sv := serde.StringValue("42")
+//	i, err := sv.Int() // Parses "42" into an integer value
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(i) // Outputs: 42
+//
+//	bsv := serde.StringValue("true")
+//	b, err := bsv.Bool() // Parses "true" into a boolean value
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(b) // Outputs: true
+//
+// This lightweight implementation makes it easy to handle scenarios where serialized data
+// is stored in string form, such as text-based configurations or simple protocols.
 type StringValue string
 
 var _ BinarySourceValue = StringValue("")

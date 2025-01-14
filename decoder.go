@@ -24,14 +24,47 @@ func (n NotSupportedError) Error() string {
 	return fmt.Sprintf("type %q is not supported", n.Type)
 }
 
+// Unmarshal takes a [SourceValue] and decodes it into the provided target, which must be a pointer
+// to the desired destination value. The function leverages the structure of the target type to
+// guide the decoding process.
+//
+// Unlike [encoding/json.Unmarshal], where the input data structure drives the decoding,
+// [Unmarshal] in this package flips the paradigm: the target Go type drives the conversion.
+// The function walks through the fields, slices, or other components of the target type and
+// extracts the corresponding data from the [SourceValue].
+//
+// The function respects Go's visibility rules for fields, much like [encoding/json.Unmarshal].
+// Private fields are ignored, and only exported fields are considered during decoding. Conflicts
+// are handled the same way as [encoding/json.Unmarshal] would.
+//
+// By default, [Unmarshal] uses `json` struct tags to map serialized data to fields in the
+// target struct, but this can be changed by using a [Decoder] and calling [Decoder.WithTag].
+//
+// Example:
+//
+//	var myStruct struct {
+//	    Name string `json:"name"`
+//	    Age  int    `json:"age"`
+//	}
+//	err := unravel.Unmarshal(sourceValue, &myStruct)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+// This example walks the fields in `myStruct` and interacts with the [SourceValue] to
+// extract the required data. Specifically, it calls `sourceValue.Get("name").String()`
+// to populate the `Name` field and `sourceValue.Get("age").Int()` to populate the `Age` field.
+// The struct tags guide the mapping of field names to keys in the serialized data.
 func Unmarshal(source SourceValue, target any) error {
 	return dec.Unmarshal(source, target)
 }
 
+// UnmarshalNew calls [Unmarshal] with an empty instance of `T`.
 func UnmarshalNew[T any](source SourceValue) (T, error) {
 	return UnmarshalNewWith[T](&dec, source)
 }
 
+// UnmarshalNewWith calls works like [UnmarshalNew] on the provided [Decoder].
 func UnmarshalNewWith[T any](dec *Decoder, source SourceValue) (T, error) {
 	var target T
 	err := dec.Unmarshal(source, &target)
