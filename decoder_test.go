@@ -1,4 +1,4 @@
-package serde
+package unravel
 
 import (
 	"bytes"
@@ -36,7 +36,7 @@ func TestUnmarshalStruct(t *testing.T) {
 		note string
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Path: "$",
 
 		Values: map[string]any{
@@ -56,7 +56,7 @@ func TestUnmarshalStruct(t *testing.T) {
 		},
 	}
 
-	stud, err := UnmarshalNew[Student](sourceValue)
+	stud, err := UnmarshalNew[Student](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Student{
 		Name:       "Albert",
@@ -77,7 +77,7 @@ func TestUnmarshalStructWithMap(t *testing.T) {
 		Values map[string]string
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Path: "$",
 
 		Values: map[string]any{
@@ -87,7 +87,7 @@ func TestUnmarshalStructWithMap(t *testing.T) {
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{
 		Type: "Foo",
@@ -104,14 +104,14 @@ func TestNaming_JsonTagExplicit(t *testing.T) {
 		B string `json:"A"`
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A": "A",
 			".B": "B",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{B: "A"})
 }
@@ -122,14 +122,14 @@ func TestNaming_JsonTagSkip(t *testing.T) {
 		B string `json:"-"`
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A": "A",
 			".B": "B",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{A: "A"})
 }
@@ -140,14 +140,14 @@ func TestNaming_JsonTagNoName(t *testing.T) {
 		B string `json:",omitempty"` // same as no json tag
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A": "A",
 			".B": "B",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{A: "A", B: "B"})
 }
@@ -161,13 +161,13 @@ func TestNaming_EmbeddedNamingConflict(t *testing.T) {
 		Second
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A": "A",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{
 		// naming conflict, nothing deserializes
@@ -187,13 +187,13 @@ func TestNaming_EmbeddedNamingExplicitWinsOnSameNesting(t *testing.T) {
 		Second
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A": "A",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{Second: Second{A: "A"}})
 }
@@ -206,13 +206,13 @@ func TestNaming_EmbeddedLowerNestingWins(t *testing.T) {
 		A string // this one wins
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A": "A",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{A: "A"})
 }
@@ -225,14 +225,14 @@ func TestNaming_NoEmbeddingWithExplicitTag(t *testing.T) {
 		A     string
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A":       "A",
 			".First.A": "FirstA",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{A: "A", First: First{A: "FirstA"}})
 }
@@ -245,13 +245,13 @@ func TestNaming_EmbeddingWithExplicitNameWins(t *testing.T) {
 		A     string
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".A.A": "FirstA",
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{First: First{A: "FirstA"}})
 }
@@ -263,9 +263,9 @@ func TestNaming_NoEmbeddingWithPointer(t *testing.T) {
 		*First
 	}
 
-	sourceValue := dummySourceValue{}
+	source := dummySource{}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{})
 }
@@ -288,7 +288,7 @@ func TestNaming_MultipleEmbeddedTypes(t *testing.T) {
 		Second
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".B": "FirstB",
 			".C": "SecondB",
@@ -296,7 +296,7 @@ func TestNaming_MultipleEmbeddedTypes(t *testing.T) {
 		},
 	}
 
-	stud, err := UnmarshalNew[Struct](sourceValue)
+	stud, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, stud, Struct{
 		First:  First{B: "FirstB", D: "FirstD"},
@@ -307,7 +307,7 @@ func TestNaming_MultipleEmbeddedTypes(t *testing.T) {
 func TestUnsupportedType(t *testing.T) {
 	type Struct struct{ A any }
 
-	_, err := UnmarshalNew[Struct](dummySourceValue{})
+	_, err := UnmarshalNew[Struct](dummySource{})
 
 	var notSupportedError NotSupportedError
 	require.ErrorAs(t, err, &notSupportedError)
@@ -317,7 +317,7 @@ func TestUnsupportedType(t *testing.T) {
 func TestTypeUint(t *testing.T) {
 	type Struct struct{ A uint }
 
-	parsed, err := UnmarshalNew[Struct](dummySourceValue{
+	parsed, err := UnmarshalNew[Struct](dummySource{
 		Values: map[string]any{".A": int64(1234)},
 	})
 
@@ -330,18 +330,18 @@ func TestDecoderWithStructTag(t *testing.T) {
 		Foo string `url:"foo" json:"bar"`
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{".foo": "Url", ".bar": "Json"},
 	}
 
 	dec := NewDecoder().WithTag("json")
-	parsed, err := UnmarshalNewWith[Struct](dec, sourceValue)
+	parsed, err := UnmarshalNewWith[Struct](dec, source)
 	require.NoError(t, err)
 	require.Equal(t, parsed, Struct{Foo: "Json"})
 
 	dec = dec.WithTag("url")
 
-	parsed, err = UnmarshalNewWith[Struct](dec, sourceValue)
+	parsed, err = UnmarshalNewWith[Struct](dec, source)
 	require.NoError(t, err)
 	require.Equal(t, parsed, Struct{Foo: "Url"})
 }
@@ -351,11 +351,11 @@ func TestDecoderRequireValues(t *testing.T) {
 		Foo string
 	}
 
-	sourceValue := emptySourceValue{}
+	source := emptySource{}
 
 	dec := NewDecoder().RequireValues()
 
-	_, err := UnmarshalNewWith[Struct](dec, sourceValue)
+	_, err := UnmarshalNewWith[Struct](dec, source)
 	require.ErrorIs(t, err, ErrNoValue)
 }
 
@@ -364,17 +364,17 @@ func TestDecoderTextUnmarshalerInterface(t *testing.T) {
 		Foo encoding.TextUnmarshaler
 	}
 
-	_, err := UnmarshalNew[Struct](dummySourceValue{})
+	_, err := UnmarshalNew[Struct](dummySource{})
 	require.ErrorIs(t, err, NotSupportedError{Type: reflect.TypeFor[encoding.TextUnmarshaler]()})
 }
 
-type emptySourceValue struct{ EmptyValue }
+type emptySource struct{ EmptyValue }
 
-func (e emptySourceValue) Get(key string) (SourceValue, error) {
+func (e emptySource) Get(key string) (Source, error) {
 	return nil, ErrNoValue
 }
 
-func (e emptySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
+func (e emptySource) KeyValues() (iter.Seq2[Source, Source], error) {
 	return nil, ErrNotSupported
 }
 
@@ -386,7 +386,7 @@ func (t *Tags) UnmarshalText(text []byte) error {
 }
 
 func TestTextUnmarshaler(t *testing.T) {
-	studentSource := dummySourceValue{
+	studentSource := dummySource{
 		Values: map[string]any{
 			".Host": "127.0.0.1",
 			".Port": int64(80),
@@ -414,7 +414,7 @@ func TestUnmarshalGitCommit(t *testing.T) {
 		Parent *GitCommit
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".Sha1":                 "aaaa",
 			".Parent.Sha1":          "bbbb",
@@ -423,7 +423,7 @@ func TestUnmarshalGitCommit(t *testing.T) {
 		},
 	}
 
-	value, err := UnmarshalNew[GitCommit](sourceValue)
+	value, err := UnmarshalNew[GitCommit](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, value, GitCommit{
 		Sha1: "aaaa",
@@ -443,7 +443,7 @@ func TestUnmarshalSliceValue(t *testing.T) {
 		Tags []string
 	}
 
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			".Text": "some long text",
 			".Tags": []string{
@@ -454,7 +454,7 @@ func TestUnmarshalSliceValue(t *testing.T) {
 		},
 	}
 
-	value, err := UnmarshalNew[Article](sourceValue)
+	value, err := UnmarshalNew[Article](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, value, Article{
 		Text: "some long text",
@@ -467,7 +467,7 @@ func TestUnmarshalSliceValue(t *testing.T) {
 }
 
 func TestUnmarshalArrayValue(t *testing.T) {
-	sourceValue := dummySourceValue{
+	source := dummySource{
 		Values: map[string]any{
 			"": []string{
 				"first",
@@ -477,22 +477,22 @@ func TestUnmarshalArrayValue(t *testing.T) {
 		},
 	}
 
-	tags4, err := UnmarshalNew[[4]string](sourceValue)
+	tags4, err := UnmarshalNew[[4]string](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, tags4, [4]string{"first", "second", "third", ""})
 
-	tags2, err := UnmarshalNew[[2]string](sourceValue)
+	tags2, err := UnmarshalNew[[2]string](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, tags2, [2]string{"first", "second"})
 }
 
-type dummySourceValue struct {
+type dummySource struct {
 	Values map[string]any
 	Path   string
 }
 
-func (d dummySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
-	return func(yield func(SourceValue, SourceValue) bool) {
+func (d dummySource) KeyValues() (iter.Seq2[Source, Source], error) {
+	return func(yield func(Source, Source) bool) {
 		for key, value := range d.Values {
 			if !strings.HasPrefix(key, d.Path+".") {
 				continue
@@ -507,7 +507,7 @@ func (d dummySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], erro
 	}, nil
 }
 
-func (d dummySourceValue) Float() (float64, error) {
+func (d dummySource) Float() (float64, error) {
 	if value, ok := d.Values[d.Path]; ok {
 		if floatValue, ok := value.(float64); ok {
 			return floatValue, nil
@@ -519,16 +519,16 @@ func (d dummySourceValue) Float() (float64, error) {
 	return 3.14159, nil
 }
 
-func (d dummySourceValue) Bool() (bool, error) {
+func (d dummySource) Bool() (bool, error) {
 	return true, nil
 }
 
-func (d dummySourceValue) Iter() (iter.Seq[SourceValue], error) {
+func (d dummySource) Iter() (iter.Seq[Source], error) {
 	if value, ok := d.Values[d.Path]; ok {
 		if sliceValue, ok := value.([]string); ok {
-			valuesIter := func(yield func(SourceValue) bool) {
+			valuesIter := func(yield func(Source) bool) {
 				for _, value := range sliceValue {
-					elementSource := dummySourceValue{Values: map[string]any{"": value}}
+					elementSource := dummySource{Values: map[string]any{"": value}}
 					if !yield(elementSource) {
 						break
 					}
@@ -541,7 +541,7 @@ func (d dummySourceValue) Iter() (iter.Seq[SourceValue], error) {
 	return nil, ErrNotSupported
 }
 
-func (d dummySourceValue) Int() (int64, error) {
+func (d dummySource) Int() (int64, error) {
 	if value, ok := d.Values[d.Path]; ok {
 		if intValue, ok := value.(int64); ok {
 			return intValue, nil
@@ -553,12 +553,12 @@ func (d dummySourceValue) Int() (int64, error) {
 	return 1234, nil
 }
 
-func (d dummySourceValue) Uint() (uint64, error) {
+func (d dummySource) Uint() (uint64, error) {
 	value, err := d.Int()
 	return uint64(value), err
 }
 
-func (d dummySourceValue) String() (string, error) {
+func (d dummySource) String() (string, error) {
 	if value, ok := d.Values[d.Path]; ok {
 		if strValue, ok := value.(string); ok {
 			return strValue, nil
@@ -570,22 +570,22 @@ func (d dummySourceValue) String() (string, error) {
 	return "foobar", nil
 }
 
-func (d dummySourceValue) Get(key string) (SourceValue, error) {
+func (d dummySource) Get(key string) (Source, error) {
 	path := d.Path + "." + key
 	if value, ok := d.Values[path]; ok && value == nil {
 		return nil, ErrNoValue
 	}
 
-	return dummySourceValue{Values: d.Values, Path: path}, nil
+	return dummySource{Values: d.Values, Path: path}, nil
 }
 
-type binarySourceValue struct {
+type binarySource struct {
 	EmptyValue
 	r io.Reader
 }
 
-func (b binarySourceValue) Iter() (iter.Seq[SourceValue], error) {
-	it := func(yield func(SourceValue) bool) {
+func (b binarySource) Iter() (iter.Seq[Source], error) {
+	it := func(yield func(Source) bool) {
 		for {
 			if !yield(b) {
 				break
@@ -596,15 +596,15 @@ func (b binarySourceValue) Iter() (iter.Seq[SourceValue], error) {
 	return it, nil
 }
 
-func (b binarySourceValue) Get(key string) (SourceValue, error) {
+func (b binarySource) Get(key string) (Source, error) {
 	return b, nil
 }
 
-func (b binarySourceValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
+func (b binarySource) KeyValues() (iter.Seq2[Source, Source], error) {
 	return nil, ErrNotSupported
 }
 
-func (b binarySourceValue) Int8() (int8, error) {
+func (b binarySource) Int8() (int8, error) {
 	var buf [1]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -613,7 +613,7 @@ func (b binarySourceValue) Int8() (int8, error) {
 	return int8(buf[0]), nil
 }
 
-func (b binarySourceValue) Int16() (int16, error) {
+func (b binarySource) Int16() (int16, error) {
 	var buf [2]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -622,7 +622,7 @@ func (b binarySourceValue) Int16() (int16, error) {
 	return int16(binary.LittleEndian.Uint16(buf[:])), nil
 }
 
-func (b binarySourceValue) Int32() (int32, error) {
+func (b binarySource) Int32() (int32, error) {
 	var buf [4]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -631,7 +631,7 @@ func (b binarySourceValue) Int32() (int32, error) {
 	return int32(binary.LittleEndian.Uint32(buf[:])), nil
 }
 
-func (b binarySourceValue) Int64() (int64, error) {
+func (b binarySource) Int64() (int64, error) {
 	var buf [8]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -640,7 +640,7 @@ func (b binarySourceValue) Int64() (int64, error) {
 	return int64(binary.LittleEndian.Uint64(buf[:])), nil
 }
 
-func (b binarySourceValue) Uint8() (uint8, error) {
+func (b binarySource) Uint8() (uint8, error) {
 	var buf [1]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -649,7 +649,7 @@ func (b binarySourceValue) Uint8() (uint8, error) {
 	return buf[0], nil
 }
 
-func (b binarySourceValue) Uint16() (uint16, error) {
+func (b binarySource) Uint16() (uint16, error) {
 	var buf [2]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -658,7 +658,7 @@ func (b binarySourceValue) Uint16() (uint16, error) {
 	return binary.LittleEndian.Uint16(buf[:]), nil
 }
 
-func (b binarySourceValue) Uint32() (uint32, error) {
+func (b binarySource) Uint32() (uint32, error) {
 	var buf [4]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -667,7 +667,7 @@ func (b binarySourceValue) Uint32() (uint32, error) {
 	return binary.LittleEndian.Uint32(buf[:]), nil
 }
 
-func (b binarySourceValue) Uint64() (uint64, error) {
+func (b binarySource) Uint64() (uint64, error) {
 	var buf [8]byte
 	if _, err := b.r.Read(buf[:]); err != nil {
 		return 0, err
@@ -676,15 +676,15 @@ func (b binarySourceValue) Uint64() (uint64, error) {
 	return binary.LittleEndian.Uint64(buf[:]), nil
 }
 
-func (b binarySourceValue) Float32() (float32, error) {
+func (b binarySource) Float32() (float32, error) {
 	return 0, ErrNotSupported
 }
 
-func (b binarySourceValue) Float64() (float64, error) {
+func (b binarySource) Float64() (float64, error) {
 	return 0, ErrNotSupported
 }
 
-func TestBinarySourceValue(t *testing.T) {
+func TestBinarySource(t *testing.T) {
 	var values []byte
 	for idx := range 256 {
 		values = append(values, byte(idx))
@@ -714,8 +714,8 @@ func TestBinarySourceValue(t *testing.T) {
 		Uint64: 0x1d1c1b1a19181716,
 	}
 
-	sourceValue := binarySourceValue{r: bytes.NewReader(values)}
-	parsed, err := UnmarshalNew[Struct](sourceValue)
+	source := binarySource{r: bytes.NewReader(values)}
+	parsed, err := UnmarshalNew[Struct](source)
 	require.Equal(t, err, nil)
 	require.Equal(t, parsed, expected)
 }
@@ -750,9 +750,9 @@ func TestDecodeBitmapHeader(t *testing.T) {
 	}
 
 	buf, _ := base64.StdEncoding.DecodeString(`Qk3GAAAAAAAAAIoAAAB8AAAAAwAAAAUAAAABABgAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAD/AAD/AAAAAAAA/0JHUnOPwvUoUbgeFR6F6wEzMzMTZmZmJmZmZgaZmZkJPQrXAyhcjzIAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`)
-	sourceValue := binarySourceValue{r: bytes.NewReader(buf)}
+	source := binarySource{r: bytes.NewReader(buf)}
 
-	parsed, err := UnmarshalNew[Header](sourceValue)
+	parsed, err := UnmarshalNew[Header](source)
 	require.Equal(t, err, nil)
 
 	expected := Header{

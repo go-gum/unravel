@@ -1,4 +1,4 @@
-package serde
+package unravel
 
 import (
 	"encoding"
@@ -24,14 +24,14 @@ func (n NotSupportedError) Error() string {
 	return fmt.Sprintf("type %q is not supported", n.Type)
 }
 
-// Unmarshal takes a [SourceValue] and decodes it into the provided target, which must be a pointer
+// Unmarshal takes a [Source] and decodes it into the provided target, which must be a pointer
 // to the desired destination value. The function leverages the structure of the target type to
 // guide the decoding process.
 //
 // Unlike [encoding/json.Unmarshal], where the input data structure drives the decoding,
 // [Unmarshal] in this package flips the paradigm: the target Go type drives the conversion.
 // The function walks through the fields, slices, or other components of the target type and
-// extracts the corresponding data from the [SourceValue].
+// extracts the corresponding data from the [Source].
 //
 // The function respects Go's visibility rules for fields, much like [encoding/json.Unmarshal].
 // Private fields are ignored, and only exported fields are considered during decoding. Conflicts
@@ -46,33 +46,33 @@ func (n NotSupportedError) Error() string {
 //	    Name string `json:"name"`
 //	    Age  int    `json:"age"`
 //	}
-//	err := unravel.Unmarshal(sourceValue, &myStruct)
+//	err := unravel.Unmarshal(source, &myStruct)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-// This example walks the fields in `myStruct` and interacts with the [SourceValue] to
-// extract the required data. Specifically, it calls `sourceValue.Get("name").String()`
-// to populate the `Name` field and `sourceValue.Get("age").Int()` to populate the `Age` field.
+// This example walks the fields in `myStruct` and interacts with the [Source] to
+// extract the required data. Specifically, it calls `source.Get("name").String()`
+// to populate the `Name` field and `source.Get("age").Int()` to populate the `Age` field.
 // The struct tags guide the mapping of field names to keys in the serialized data.
-func Unmarshal(source SourceValue, target any) error {
+func Unmarshal(source Source, target any) error {
 	return dec.Unmarshal(source, target)
 }
 
 // UnmarshalNew calls [Unmarshal] with an empty instance of `T`.
-func UnmarshalNew[T any](source SourceValue) (T, error) {
+func UnmarshalNew[T any](source Source) (T, error) {
 	return UnmarshalNewWith[T](&dec, source)
 }
 
 // UnmarshalNewWith calls works like [UnmarshalNew] on the provided [Decoder].
-func UnmarshalNewWith[T any](dec *Decoder, source SourceValue) (T, error) {
+func UnmarshalNewWith[T any](dec *Decoder, source Source) (T, error) {
 	var target T
 	err := dec.Unmarshal(source, &target)
 	return target, err
 }
 
-// A setter sets a [reflect.Value] to a value extracted from the given [SourceValue]
-type setter func(SourceValue, reflect.Value) error
+// A setter sets a [reflect.Value] to a value extracted from the given [Source]
+type setter func(Source, reflect.Value) error
 
 // A set of types
 type typeSet map[reflect.Type]struct{}
@@ -92,7 +92,7 @@ type Decoder struct {
 	setterCache sync.Map
 
 	// Require values for struct fields. Set to true to fail with ErrNoValue
-	// if a call to [SourceValue.Get] returns [ErrNoValue].
+	// if a call to [Source.Get] returns [ErrNoValue].
 	requireValues bool
 }
 
@@ -124,7 +124,7 @@ func (d *Decoder) RequireValues() *Decoder {
 	}
 }
 
-func (d *Decoder) Unmarshal(source SourceValue, target any) error {
+func (d *Decoder) Unmarshal(source Source, target any) error {
 	targetValue := reflect.ValueOf(target).Elem()
 
 	// build the setter for the targets type
@@ -144,7 +144,7 @@ func (d *Decoder) setterOf(inConstruction typeSet, ty reflect.Type) (setter, err
 	if _, ok := inConstruction[ty]; ok {
 		// detected a cycle. return a setter that does a cache lookup when executed.
 		// we assume that the actual setter will be in the cache once this setter is executed.
-		lazySetter := func(source SourceValue, target reflect.Value) error {
+		lazySetter := func(source Source, target reflect.Value) error {
 			cached, _ := d.setterCache.Load(ty)
 			return cached.(setter)(source, target)
 		}
@@ -176,46 +176,46 @@ func (d *Decoder) makeSetterOf(inConstruction typeSet, ty reflect.Type) (setter,
 	case reflect.Int:
 		switch unsafe.Sizeof(int(int8(0))) {
 		case 4:
-			return makeSetInt(BinarySourceValue.Int32, math.MinInt, math.MaxInt), nil
+			return makeSetInt(BinarySource.Int32, math.MinInt, math.MaxInt), nil
 		case 8:
-			return makeSetInt(BinarySourceValue.Int64, math.MinInt, math.MaxInt), nil
+			return makeSetInt(BinarySource.Int64, math.MinInt, math.MaxInt), nil
 		default:
 			panic("int must be 4 or 8 byte")
 		}
 
 	case reflect.Int8:
-		return makeSetInt(BinarySourceValue.Int8, math.MinInt8, math.MaxInt8), nil
+		return makeSetInt(BinarySource.Int8, math.MinInt8, math.MaxInt8), nil
 
 	case reflect.Int16:
-		return makeSetInt(BinarySourceValue.Int16, math.MinInt16, math.MaxInt16), nil
+		return makeSetInt(BinarySource.Int16, math.MinInt16, math.MaxInt16), nil
 
 	case reflect.Int32:
-		return makeSetInt(BinarySourceValue.Int32, math.MinInt32, math.MaxInt32), nil
+		return makeSetInt(BinarySource.Int32, math.MinInt32, math.MaxInt32), nil
 
 	case reflect.Int64:
-		return makeSetInt(BinarySourceValue.Int64, math.MinInt64, math.MaxInt64), nil
+		return makeSetInt(BinarySource.Int64, math.MinInt64, math.MaxInt64), nil
 
 	case reflect.Uint:
 		switch unsafe.Sizeof(uint(0)) {
 		case 4:
-			return makeSetUint(BinarySourceValue.Uint32, math.MaxUint), nil
+			return makeSetUint(BinarySource.Uint32, math.MaxUint), nil
 		case 8:
-			return makeSetUint(BinarySourceValue.Uint64, math.MaxUint), nil
+			return makeSetUint(BinarySource.Uint64, math.MaxUint), nil
 		default:
 			panic("uint must be 4 or 8 byte")
 		}
 
 	case reflect.Uint8:
-		return makeSetUint(BinarySourceValue.Uint8, math.MaxUint8), nil
+		return makeSetUint(BinarySource.Uint8, math.MaxUint8), nil
 
 	case reflect.Uint16:
-		return makeSetUint(BinarySourceValue.Uint16, math.MaxUint16), nil
+		return makeSetUint(BinarySource.Uint16, math.MaxUint16), nil
 
 	case reflect.Uint32:
-		return makeSetUint(BinarySourceValue.Uint32, math.MaxUint32), nil
+		return makeSetUint(BinarySource.Uint32, math.MaxUint32), nil
 
 	case reflect.Uint64:
-		return makeSetUint(BinarySourceValue.Uint64, math.MaxUint64), nil
+		return makeSetUint(BinarySource.Uint64, math.MaxUint64), nil
 
 	case reflect.Float32, reflect.Float64:
 		return setFloat, nil
@@ -262,7 +262,7 @@ func (d *Decoder) makeSetStruct(inConstruction typeSet, ty reflect.Type) (setter
 		setters = append(setters, de)
 	}
 
-	setter := func(source SourceValue, target reflect.Value) error {
+	setter := func(source Source, target reflect.Value) error {
 		for idx, field := range fields {
 			fieldSource, err := source.Get(field.Name)
 			switch {
@@ -303,7 +303,7 @@ func (d *Decoder) makeSetMap(inConstruction typeSet, ty reflect.Type) (setter, e
 	keyType := ty.Key()
 	valueType := ty.Elem()
 
-	setter := func(source SourceValue, target reflect.Value) error {
+	setter := func(source Source, target reflect.Value) error {
 		keyValues, err := source.KeyValues()
 		if err != nil {
 			return fmt.Errorf("iterate key/value pairs: %w", err)
@@ -342,7 +342,7 @@ func (d *Decoder) makeSetSlice(inConstruction typeSet, ty reflect.Type) (setter,
 	// a empty element
 	placeholderValue := reflect.New(ty.Elem()).Elem()
 
-	setter := func(source SourceValue, target reflect.Value) error {
+	setter := func(source Source, target reflect.Value) error {
 		sourceIter, err := source.Iter()
 		if err != nil {
 			return fmt.Errorf("as iter: %w", err)
@@ -374,7 +374,7 @@ func (d *Decoder) makeSetArray(inConstruction typeSet, ty reflect.Type) (setter,
 	// number of elements in the array
 	elementCount := ty.Len()
 
-	setter := func(source SourceValue, target reflect.Value) error {
+	setter := func(source Source, target reflect.Value) error {
 		sourceIter, err := source.Iter()
 		if err != nil {
 			return fmt.Errorf("as iter: %w", err)
@@ -409,7 +409,7 @@ func (d *Decoder) makeSetPointer(inConstruction typeSet, ty reflect.Type) (sette
 		return nil, err
 	}
 
-	setter := func(source SourceValue, target reflect.Value) error {
+	setter := func(source Source, target reflect.Value) error {
 		// newValue is now a pointer to an instance of the pointeeType
 		newValue := reflect.New(pointeeType)
 		if err := pointeeSetter(source, newValue.Elem()); err != nil {
@@ -425,7 +425,7 @@ func (d *Decoder) makeSetPointer(inConstruction typeSet, ty reflect.Type) (sette
 	return setter, err
 }
 
-func setBool(source SourceValue, target reflect.Value) error {
+func setBool(source Source, target reflect.Value) error {
 	boolValue, err := source.Bool()
 	if err != nil {
 		return fmt.Errorf("get bool value: %w", err)
@@ -436,11 +436,11 @@ func setBool(source SourceValue, target reflect.Value) error {
 }
 
 func makeSetInt[T constraints.Integer](
-	parse func(BinarySourceValue) (T, error),
+	parse func(BinarySource) (T, error),
 	minValue, maxValue int64,
 ) setter {
-	return func(source SourceValue, target reflect.Value) error {
-		if intSource, ok := source.(BinarySourceValue); ok {
+	return func(source Source, target reflect.Value) error {
+		if intSource, ok := source.(BinarySource); ok {
 			parsedValue, err := parse(intSource)
 			if err != nil {
 				return fmt.Errorf("get %T value: %w", parsedValue, err)
@@ -450,7 +450,7 @@ func makeSetInt[T constraints.Integer](
 			return nil
 		}
 
-		// no int source, need to fallback to SourceValue.Int
+		// no int source, need to fallback to Source.Int
 		intValue, err := source.Int()
 		if err != nil {
 			return fmt.Errorf("get int value: %w", err)
@@ -472,11 +472,11 @@ func makeSetInt[T constraints.Integer](
 }
 
 func makeSetUint[T constraints.Unsigned](
-	parse func(BinarySourceValue) (T, error),
+	parse func(BinarySource) (T, error),
 	maxValue uint64,
 ) setter {
-	return func(source SourceValue, target reflect.Value) error {
-		if intSource, ok := source.(BinarySourceValue); ok {
+	return func(source Source, target reflect.Value) error {
+		if intSource, ok := source.(BinarySource); ok {
 			parsedValue, err := parse(intSource)
 			if err != nil {
 				return fmt.Errorf("get %T value: %w", parsedValue, err)
@@ -486,7 +486,7 @@ func makeSetUint[T constraints.Unsigned](
 			return nil
 		}
 
-		// no int source, need to fallback to SourceValue.Int
+		// no int source, need to fallback to Source.Int
 		intValue, err := source.Uint()
 		if err != nil {
 			return fmt.Errorf("get uint value: %w", err)
@@ -503,7 +503,7 @@ func makeSetUint[T constraints.Unsigned](
 	}
 }
 
-func setFloat(source SourceValue, target reflect.Value) error {
+func setFloat(source Source, target reflect.Value) error {
 	floatValue, err := source.Float()
 	if err != nil {
 		return fmt.Errorf("get float value: %w", err)
@@ -513,7 +513,7 @@ func setFloat(source SourceValue, target reflect.Value) error {
 	return nil
 }
 
-func setString(source SourceValue, target reflect.Value) error {
+func setString(source Source, target reflect.Value) error {
 	stringValue, err := source.String()
 	if err != nil {
 		return fmt.Errorf("get string value: %w", err)
@@ -524,7 +524,7 @@ func setString(source SourceValue, target reflect.Value) error {
 	return nil
 }
 
-func setTextUnmarshaler(source SourceValue, target reflect.Value) error {
+func setTextUnmarshaler(source Source, target reflect.Value) error {
 	text, err := source.String()
 	if err != nil {
 		return fmt.Errorf("get string value: %w", err)

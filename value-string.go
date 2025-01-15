@@ -1,4 +1,4 @@
-package serde
+package unravel
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-// StringValue adapts a `string` to the [SourceValue] interface, providing a straightforward
+// StringValue adapts a `string` to the [Source] interface, providing a straightforward
 // implementation for working with textual data. It enables parsing of primitive types from
 // the underlying string representation using the following functions from the `strconv` package:
 //
@@ -19,19 +19,19 @@ import (
 //
 // This implementation is particularly useful for source values where the data is represented
 // as strings but needs to be decoded into native Go types. Developers can use `StringValue`
-// directly or embed it within custom [SourceValue] implementations to inherit its parsing
+// directly or embed it within custom [Source] implementations to inherit its parsing
 // functionality.
 //
 // Example:
 //
-//	sv := serde.StringValue("42")
+//	sv := unravel.StringValue("42")
 //	i, err := sv.Int() // Parses "42" into an integer value
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	fmt.Println(i) // Outputs: 42
 //
-//	bsv := serde.StringValue("true")
+//	bsv := unravel.StringValue("true")
 //	b, err := bsv.Bool() // Parses "true" into a boolean value
 //	if err != nil {
 //	    log.Fatal(err)
@@ -42,7 +42,7 @@ import (
 // is stored in string form, such as text-based configurations or simple protocols.
 type StringValue string
 
-var _ BinarySourceValue = StringValue("")
+var _ BinarySource = StringValue("")
 
 func (s StringValue) Int8() (int8, error) {
 	intValue, err := strconv.ParseInt(string(s), 10, 8)
@@ -115,15 +115,15 @@ func (s StringValue) String() (string, error) {
 	return string(s), nil
 }
 
-func (s StringValue) Get(key string) (SourceValue, error) {
+func (s StringValue) Get(key string) (Source, error) {
 	return nil, ErrNotSupported
 }
 
-func (s StringValue) KeyValues() (iter.Seq2[SourceValue, SourceValue], error) {
+func (s StringValue) KeyValues() (iter.Seq2[Source, Source], error) {
 	return nil, ErrNotSupported
 }
 
-func (s StringValue) Iter() (iter.Seq[SourceValue], error) {
+func (s StringValue) Iter() (iter.Seq[Source], error) {
 	return nil, ErrNotSupported
 }
 func handleSyntaxErr[T any](inputValue string, value T, err error) (T, error) {

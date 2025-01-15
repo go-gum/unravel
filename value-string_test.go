@@ -1,4 +1,4 @@
-package serde
+package unravel
 
 import (
 	"fmt"
@@ -10,14 +10,14 @@ import (
 )
 
 func TestStringValue(t *testing.T) {
-	runSourceValueTests(t, toStringSource, math.MaxUint64)
+	runSourceTests(t, toStringSource, math.MaxUint64)
 }
 
 func TestSimpleStringValue(t *testing.T) {
-	runSourceValueTests(t, toSimpleStringValue, math.MaxUint64)
+	runSourceTests(t, toSimpleStringValue, math.MaxUint64)
 }
 
-func runSourceValueTests(t *testing.T, toStringSource func(value string) SourceValue, maxUint64 uint64) {
+func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxUint64 uint64) {
 	if unsafe.Sizeof(int(int8(0))) == 8 {
 		parseTest(t, toStringSource, stringValueTestValues[int]{
 			MinIn:        "-9223372036854775808",
@@ -140,7 +140,7 @@ type stringValueTestValues[T any] struct {
 	Valid        []string
 }
 
-func parseTest[T any](t *testing.T, toSource func(string) SourceValue, v stringValueTestValues[T]) {
+func parseTest[T any](t *testing.T, toSource func(string) Source, v stringValueTestValues[T]) {
 	var tZero T
 
 	t.Run(fmt.Sprintf("parse to %T", tZero), func(t *testing.T) {
@@ -171,11 +171,11 @@ func parseTest[T any](t *testing.T, toSource func(string) SourceValue, v stringV
 	})
 }
 
-func toStringSource(value string) SourceValue {
+func toStringSource(value string) Source {
 	return StringValue(value)
 }
 
-func toSimpleStringValue(value string) SourceValue {
+func toSimpleStringValue(value string) Source {
 	return simpleStringValue{Value: value}
 }
 
