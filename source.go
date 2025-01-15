@@ -7,13 +7,13 @@ import "iter"
 // and accessing various types of serialized data.
 //
 // A [Source] provides methods to interpret the source data in different forms:
-//   - **Primitive types**: Supports conversion to basic Go types such as `bool`, `int`, `uint`,
+//   - Primitive types: Supports conversion to basic Go types such as `bool`, `int`, `uint`,
 //     `float`, and `string`.
-//   - **Objects**: Accesses nested data structures using [Source.Get], which retrieves
+//   - Objects: Accesses nested data structures using [unravel.Source.Get], which retrieves
 //     a value corresponding to a specified key.
-//   - **Slices**: Iterates over list-like structures using [Source.Iter], enabling sequential
+//   - Slices: Iterates over list-like structures using [unravel.Source.Iter], enabling sequential
 //     processing of elements.
-//   - **Maps**: Handles key-value pairs via [Source.KeyValue], facilitating traversal of
+//   - Maps: Handles key-value pairs via [unravel.Source.KeyValues], facilitating traversal of
 //     dictionary-like data.
 //
 // If converting the [Source] into a particular type isn't possible, the method must return
@@ -32,11 +32,11 @@ import "iter"
 // To facilitate the creation of custom [Source] implementations, the package includes
 // two ready-to-use implementations:
 //
-//  1. **[StringValue]**: This implementation leverages the `strconv` package to parse strings
+//  1. [StringValue]: This implementation leverages the `strconv` package to parse strings
 //     into various target types, such as integers, floats, and booleans. It serves as a practical
 //     foundation for source values that operate on textual data.
 //
-//  2. **[EmptyValue]**: A minimalist implementation that returns [ErrNotSupported] for all methods.
+//  2. [EmptyValue]: A minimalist implementation that returns [ErrNotSupported] for all methods.
 //     This is ideal as a fallback or placeholder for unsupported operations or as a starting
 //     point for developing new [Source] implementations.
 //
