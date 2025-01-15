@@ -92,7 +92,7 @@ type Decoder struct {
 	setterCache sync.Map
 
 	// Require values for struct fields. Set to true to fail with ErrNoValue
-	// if a call to [Source.Get] returns [ErrNoValue].
+	// if a call to [unravel.Source.Get] returns [ErrNoValue].
 	requireValues bool
 }
 

@@ -101,7 +101,7 @@ type Source interface {
 // These methods enable decoding of data with the exact size constraints dictated by the binary format.
 //
 // When using [Unmarshal], it will prioritize these specific methods (e.g., `Int8`, `Uint16`, etc.)
-// over the more generic [Source.Int] or [Source.Float] methods. This behavior ensures
+// over the more generic [unrvael.Source.Int] or [unrvael.Source.Float] methods. This behavior ensures
 // that the decoded values adhere to the intended size and precision.
 type BinarySource interface {
 	Int8() (int8, error)

@@ -5,7 +5,7 @@
 //
 // A key component of the package is the [Source], which serves as an abstraction over
 // the underlying serialized data. It provides a suite of methods to extract values in their
-// intended forms, such as [Source.Int] for integers and [Source.String]
+// intended forms, such as [unravel.Source.Int] for integers and [unravel.Source.String]
 // for strings. During the unmarshaling process, the [Decoder] navigates the structure of the
 // target Go type and retrieves the corresponding data from the [Source]. This design
 // makes it easy to work with a variety of serialized formats while maintaining a consistent
