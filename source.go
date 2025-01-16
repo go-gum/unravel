@@ -32,11 +32,11 @@ import "iter"
 // To facilitate the creation of custom [Source] implementations, the package includes
 // two ready-to-use implementations:
 //
-//  1. [StringValue]: This implementation leverages the `strconv` package to parse strings
+//  1. [StringSource]: This implementation leverages the `strconv` package to parse strings
 //     into various target types, such as integers, floats, and booleans. It serves as a practical
 //     foundation for source values that operate on textual data.
 //
-//  2. [EmptyValue]: A minimalist implementation that returns [ErrNotSupported] for all methods.
+//  2. [EmptySource]: A minimalist implementation that returns [ErrNotSupported] for all methods.
 //     This is ideal as a fallback or placeholder for unsupported operations or as a starting
 //     point for developing new [Source] implementations.
 //
@@ -47,7 +47,7 @@ import "iter"
 // Example:
 //
 //	type MySource struct {
-//	    unravel.StringValue // Embed StringValue for string parsing support
+//	    unravel.StringSource // Embed StringSource for string parsing support
 //	}
 //
 //	func (m *MySource) Get(key string) (unravel.Source, error) {

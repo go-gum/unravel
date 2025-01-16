@@ -514,12 +514,12 @@ func setFloat(source Source, target reflect.Value) error {
 }
 
 func setString(source Source, target reflect.Value) error {
-	stringValue, err := source.String()
+	stringSource, err := source.String()
 	if err != nil {
 		return fmt.Errorf("get string value: %w", err)
 	}
 
-	target.SetString(stringValue)
+	target.SetString(stringSource)
 
 	return nil
 }

@@ -366,7 +366,7 @@ func TestDecoderTextUnmarshalerInterface(t *testing.T) {
 	require.ErrorIs(t, err, NotSupportedError{Type: reflect.TypeFor[encoding.TextUnmarshaler]()})
 }
 
-type emptySource struct{ EmptyValue }
+type emptySource struct{ EmptySource }
 
 func (e emptySource) Get(key string) (Source, error) {
 	return nil, ErrNoValue
@@ -498,7 +498,7 @@ func (d dummySource) KeyValues() (iter.Seq2[Source, Source], error) {
 
 			key = strings.TrimPrefix(key, d.Path+".")
 
-			if !yield(StringValue(key), StringValue(value.(string))) {
+			if !yield(StringSource(key), StringSource(value.(string))) {
 				return
 			}
 		}
@@ -578,7 +578,7 @@ func (d dummySource) Get(key string) (Source, error) {
 }
 
 type binarySource struct {
-	EmptyValue
+	EmptySource
 	r io.Reader
 }
 

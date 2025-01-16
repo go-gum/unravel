@@ -9,17 +9,17 @@ import (
 	"unsafe"
 )
 
-func TestStringValue(t *testing.T) {
+func TestStringSource(t *testing.T) {
 	runSourceTests(t, toStringSource, math.MaxUint64)
 }
 
-func TestSimpleStringValue(t *testing.T) {
-	runSourceTests(t, toSimpleStringValue, math.MaxUint64)
+func TestSimpleStringSource(t *testing.T) {
+	runSourceTests(t, toSimpleStringSource, math.MaxUint64)
 }
 
 func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxUint64 uint64) {
 	if unsafe.Sizeof(int(int8(0))) == 8 {
-		parseTest(t, toStringSource, stringValueTestValues[int]{
+		parseTest(t, toStringSource, stringSourceTestValues[int]{
 			MinIn:        "-9223372036854775808",
 			MinOut:       -9223372036854775808,
 			MaxIn:        "9223372036854775807",
@@ -28,7 +28,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 			NotSupported: []string{"foobar", "", "1e4"},
 		})
 
-		parseTest(t, toStringSource, stringValueTestValues[uint]{
+		parseTest(t, toStringSource, stringSourceTestValues[uint]{
 			MinIn:        "0",
 			MinOut:       0,
 			MaxIn:        strconv.FormatUint(maxUint64, 10),
@@ -38,7 +38,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		})
 	}
 
-	parseTest(t, toStringSource, stringValueTestValues[int8]{
+	parseTest(t, toStringSource, stringSourceTestValues[int8]{
 		MinIn:        "-128",
 		MinOut:       -128,
 		MaxIn:        "127",
@@ -47,7 +47,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[int16]{
+	parseTest(t, toStringSource, stringSourceTestValues[int16]{
 		MinIn:        "-32768",
 		MinOut:       -32768,
 		MaxIn:        "32767",
@@ -56,7 +56,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[int32]{
+	parseTest(t, toStringSource, stringSourceTestValues[int32]{
 		MinIn:        "-2147483648",
 		MinOut:       -2147483648,
 		MaxIn:        "2147483647",
@@ -65,7 +65,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[int64]{
+	parseTest(t, toStringSource, stringSourceTestValues[int64]{
 		MinIn:        "-9223372036854775808",
 		MinOut:       -9223372036854775808,
 		MaxIn:        "9223372036854775807",
@@ -74,7 +74,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[uint8]{
+	parseTest(t, toStringSource, stringSourceTestValues[uint8]{
 		MinIn:        "0",
 		MinOut:       0,
 		MaxIn:        "255",
@@ -83,7 +83,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4", "-1"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[uint16]{
+	parseTest(t, toStringSource, stringSourceTestValues[uint16]{
 		MinIn:        "0",
 		MinOut:       0,
 		MaxIn:        "65535",
@@ -92,7 +92,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4", "-1"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[uint32]{
+	parseTest(t, toStringSource, stringSourceTestValues[uint32]{
 		MinIn:        "0",
 		MinOut:       0,
 		MaxIn:        "4294967295",
@@ -101,7 +101,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4", "-1"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[uint64]{
+	parseTest(t, toStringSource, stringSourceTestValues[uint64]{
 		MinIn:        "0",
 		MinOut:       0,
 		MaxIn:        strconv.FormatUint(maxUint64, 10),
@@ -110,7 +110,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4", "-1"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[bool]{
+	parseTest(t, toStringSource, stringSourceTestValues[bool]{
 		MinIn:        "true",
 		MinOut:       true,
 		MaxIn:        "false",
@@ -118,7 +118,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 		NotSupported: []string{"foobar", "", "1e4", "-1"},
 	})
 
-	parseTest(t, toStringSource, stringValueTestValues[float64]{
+	parseTest(t, toStringSource, stringSourceTestValues[float64]{
 		MinIn:        "-1234.5",
 		MinOut:       -1234.5,
 		MaxIn:        "1235.5",
@@ -128,7 +128,7 @@ func runSourceTests(t *testing.T, toStringSource func(value string) Source, maxU
 	})
 }
 
-type stringValueTestValues[T any] struct {
+type stringSourceTestValues[T any] struct {
 	MinIn  string
 	MinOut T
 
@@ -140,7 +140,7 @@ type stringValueTestValues[T any] struct {
 	Valid        []string
 }
 
-func parseTest[T any](t *testing.T, toSource func(string) Source, v stringValueTestValues[T]) {
+func parseTest[T any](t *testing.T, toSource func(string) Source, v stringSourceTestValues[T]) {
 	var tZero T
 
 	t.Run(fmt.Sprintf("parse to %T", tZero), func(t *testing.T) {
@@ -172,30 +172,30 @@ func parseTest[T any](t *testing.T, toSource func(string) Source, v stringValueT
 }
 
 func toStringSource(value string) Source {
-	return StringValue(value)
+	return StringSource(value)
 }
 
-func toSimpleStringValue(value string) Source {
-	return simpleStringValue{Value: value}
+func toSimpleStringSource(value string) Source {
+	return simpleStringSource{Value: value}
 }
 
-type simpleStringValue struct {
-	EmptyValue
+type simpleStringSource struct {
+	EmptySource
 	Value string
 }
 
-func (s simpleStringValue) Bool() (bool, error) {
-	return StringValue(s.Value).Bool()
+func (s simpleStringSource) Bool() (bool, error) {
+	return StringSource(s.Value).Bool()
 }
 
-func (s simpleStringValue) Float() (float64, error) {
-	return StringValue(s.Value).Float()
+func (s simpleStringSource) Float() (float64, error) {
+	return StringSource(s.Value).Float()
 }
 
-func (s simpleStringValue) Int() (int64, error) {
-	return StringValue(s.Value).Int()
+func (s simpleStringSource) Int() (int64, error) {
+	return StringSource(s.Value).Int()
 }
 
-func (s simpleStringValue) Uint() (uint64, error) {
-	return StringValue(s.Value).Uint()
+func (s simpleStringSource) Uint() (uint64, error) {
+	return StringSource(s.Value).Uint()
 }
