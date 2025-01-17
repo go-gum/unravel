@@ -37,6 +37,9 @@ func (n NotSupportedError) Error() string {
 // Private fields are ignored, and only exported fields are considered during decoding. Conflicts
 // are handled the same way as [encoding/json.Unmarshal] would.
 //
+// If a target value implements [encoding.TextUnmarshaler], the value will be read as string from
+// the [Source] and the [encoding.TextUnmarshaler.UnmarshalText] will be called.
+//
 // By default, [Unmarshal] uses `json` struct tags to map serialized data to fields in the
 // target struct, but this can be changed by using a [Decoder] and calling [Decoder.WithTag].
 //

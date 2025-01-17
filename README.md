@@ -46,6 +46,7 @@ sources. Here are some potential implementations:
 
 ## Further Reading
 
-To dive deeper into the rationale and groundwork behind unravel, check out this
-post: https://stuff.narf.zone/posts/unmarshal
+For more examples on how to use unravel, you can read this [article](https://stuff.narf.zone/posts/unravel/).
+
+To dive deeper into the groundwork behind unravel, check out this [post](https://stuff.narf.zone/posts/unmarshal/).
 
