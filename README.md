@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-gum/unravel)](https://goreportcard.com/report/github.com/go-gum/unravel)
 
 Unravel is a Go package that provides an abstraction layer for working with serialized or structured data. At its core,
-it introduces the `Source` interface, which defines an abstract data model for source data. The package also
+it introduces the [`Source`](https://pkg.go.dev/github.com/go-gum/unravel#Source) interface, which defines an abstract data model for source data. The package also
 includes an `Unmarshal` function, enabling you to decode data from a `Source` into a target Go type.
 
 ## Features
